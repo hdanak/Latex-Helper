@@ -2,6 +2,7 @@ package Latex::Helper;
 our $VERSION = v0.0.1;
 
 use Modern::Perl;
+use Attribute::Handlers;
 
 =head1 SYNOPSIS
 
@@ -10,8 +11,6 @@ use Modern::Perl;
 =cut
 
 BEGIN {
-
-use Latex::Helper::Collection;
 
 use parent qw(Exporter);
 our @EXPORT = qw( MODIFY_CODE_ATTRIBUTES
@@ -24,8 +23,6 @@ our @EXPORT = qw( MODIFY_CODE_ATTRIBUTES
 );
 
 no warnings 'redefine';
-
-use Data::Dumper;
 
 sub MODIFY_CODE_ATTRIBUTES {
     my ($pkg, $ref, @attrs) = @_;
@@ -53,6 +50,57 @@ sub attr_sub {
     warn "Redefining attribute $attr_name" if exists $_CODE_HANDLERS{$attr_name};
     $_CODE_HANDLERS{$attr_name} = [ $attr_sub, %flags ];
 }
+
+sub Collection {
+    my (@data, %conf);
+    if (('REF' eq ref $_[0]) and ('ARRAY' eq ref ${$_[0]})) {
+        @data = @${+shift};
+        %conf = @_;
+    } else {
+        @data = @_;
+    }
+    my $delim = delete $conf{delim} // '';
+    my $space = delete $conf{space} // ' ';
+    my $out = shift @data or return '';
+    map { my $d = $_;
+        my $elem;
+        given (ref $d) {
+            $elem = Itemized($d, %conf)     when 'ARRAY';
+            $elem = Dictionary($d, %conf)   when 'HASH';
+            $elem = Collection(&$d(%conf))  when 'CODE';
+            $elem = "$d"
+        }
+        if ($delim) {
+            $out .= $delim
+        } elsif ($out !~ /[\}\s]$/ and $elem !~ /^[\{\s\\]/) {
+            $out .= $space
+        }
+        $out .= $elem;
+    } @data;
+    return $out
+}
+attr_sub(Collection  => sub {
+    my ($pkg, $sym, $ref, undef, $data) = @_;
+    $ref //= sub { @_ };
+    $$sym = sub { Collection(\[&ref], $data ? ( delim => $data ):()) }
+});
+sub Itemized {
+    my ($list, %attrs) = @_;
+    Env('itemize', %attrs)->(map { +'\item', Collection($_) } @$list)
+}
+attr_sub(Itemized    => sub {
+    my ($pkg, $sym, $ref, undef, $data) = @_;
+    $$sym = sub { Itemized(\@_, @$data) }
+});
+sub Dictionary {
+    my ($dict, %attrs) = @_;
+    Env('description', %attrs)->(map {
+                    +"\\item[$_]", Collection($$dict{$_}) } keys %$dict)
+}
+attr_sub(Dictionary  => sub {
+    my ($pkg, $sym, $ref, undef, $data) = @_;
+    $$sym = sub { Dictionary(\@_, @$data) }
+});
 
 sub Group {
 # NOTE: device method for items to communicate with their Collection;
