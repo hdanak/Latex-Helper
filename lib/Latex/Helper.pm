@@ -58,7 +58,7 @@ sub Group {
 # NOTE: device method for items to communicate with their Collection;
 #   for example, the C<italic> element could add an italic-correction token at
 #   the end of its C<Group>, without every C<Group> having one.
-    '{'.&Collection.'\/}'
+    '{'.&Collection.'}'
 }
 attr_sub Group => sub {
     my ($pkg, $sym, $ref, $data) = @_;
@@ -68,7 +68,7 @@ attr_sub AutoGroup => sub {
     my ($pkg, $sym, $ref, $data) = @_;
     $$sym = sub {
         my @items = &$ref;
-        @items ? Group(@$data, @items) : @$data
+        @items ? Group(@$data, @items) : "@$data"
     }
 };
 sub NewCommand {
@@ -141,7 +141,7 @@ sub space {
 }
 
 sub normal      :AutoGroup('\normalfont');
-sub italic      :AutoGroup('\itshape');
+sub italic      :AutoGroup('\itshape'):Wrap(&inner.(@_?'\/':''));
 sub slanted     :AutoGroup('\slshape');
 sub boldface    :AutoGroup('\bfseries');
 sub mediumface  :AutoGroup('\mdseries');

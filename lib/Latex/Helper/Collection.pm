@@ -10,55 +10,42 @@ our @EXPORT = qw(Collection);
 
 use Latex::Helper;
 
-use overload '""' => \&render;
-
-sub new {
-    my ($class, $data, %conf) = @_;
-    my $delim = delete $conf{delim} // '';
-    bless {
-        list    => [
-            map { my $d = $_;
-                given (ref $d) {
-                    Itemized($d, %conf)     when 'ARRAY';
-                    Dictionary($d, %conf)   when 'HASH';
-                    Collection(&$d(%conf))  when 'CODE';
-                    $d
-                }
-            } @$data ],
-        delim   => $delim,
-    }, $class
-}
-sub render {
-    my ($self) = @_;
-    return '' unless @{$$self{list}};
-    my $out = $$self{list}[0];
-    for (1 .. $#{$$self{list}}) {
-        my $elem = $$self{list}[$_];
-        if ($$self{delim}) {
-            $out .= $$self{delim}
-        } elsif ($out !~ /[\}\s]$/ and $elem !~ /^[\{\s\\]/) {
-            $out .= ' '
-        }
-        $out .= $elem;
-    }
-    return $out
-}
 
 sub Collection {
+    my (@data, %conf);
     if (('REF' eq ref $_[0]) and ('ARRAY' eq ref ${$_[0]})) {
-        my ($lstrr, %conf) = @_;
-        __PACKAGE__->new($$lstrr, %conf)
+        @data = @${+shift};
+        %conf = @_;
     } else {
-        __PACKAGE__->new(\@_)
+        @data = @_;
     }
+    my $delim = delete $conf{delim} // '';
+    my $space = delete $conf{space} // ' ';
+    my $out = shift @data or return '';
+    map { my $d = $_;
+        my $elem;
+        given (ref $d) {
+            $elem = Itemized($d, %conf)     when 'ARRAY';
+            $elem = Dictionary($d, %conf)   when 'HASH';
+            $elem = Collection(&$d(%conf))  when 'CODE';
+            $elem = "$d"
+        }
+        if ($delim) {
+            $out .= $delim
+        } elsif ($out !~ /[\}\s]$/ and $elem !~ /^[\{\s\\]/) {
+            $out .= $space
+        }
+        $out .= $elem;
+    } @data;
+    return $out
 }
 sub Itemized {
     my ($list, %attrs) = @_;
-    Latex::Helper::Env('itemize', \%attrs)->(map { +'\item', Collection($_) } @$list)
+    Latex::Helper::Env('itemize', %attrs)->(map { +'\item', Collection($_) } @$list)
 }
 sub Dictionary {
     my ($dict, %attrs) = @_;
-    Latex::Helper::Env('description', \%attrs)->(map {
+    Latex::Helper::Env('description', %attrs)->(map {
                     +"\\item[$_]", Collection($$dict{$_}) } keys %$dict)
 }
 INIT {

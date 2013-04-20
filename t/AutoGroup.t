@@ -7,8 +7,10 @@ sub X :AutoGroup('\myself');
 is X, '\myself';
 is X(qw/a b c d 1 2 3/), Group(qw{\myself a b c d 1 2 3});
 
-sub Y :AutoGroup('\metoo') { [@_] }
+sub Y :AutoGroup('\metoo') { map { uc } @_ }
 is Y, '\metoo';
-is Y(qw/a b c d 1 2 3/), Group([qw{\metoo a b c d 1 2 3}]);
+is Y(qw/a b c d 1 2 3/), Group(qw{\metoo A B C D 1 2 3});
 
-done_testing 4
+is italic('a', 'b', '\d'), '{\itshape a b\d}\/';
+
+done_testing 5
