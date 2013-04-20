@@ -72,7 +72,7 @@ sub Collection {
         }
         if ($delim) {
             $out .= $delim
-        } elsif ($out !~ /[\}\s]$/ and $elem !~ /^[\{\s\\]/) {
+        } elsif ($out !~ /\W$/ and $elem !~ /^[\W]/) {
             $out .= $space
         }
         $out .= $elem;
@@ -95,7 +95,7 @@ attr_sub(Itemized    => sub {
 sub Dictionary {
     my ($dict, %attrs) = @_;
     Env('description', %attrs)->(map {
-                    +"\\item[$_]", Collection($$dict{$_}) } keys %$dict)
+                    +"\\item[$_]", Collection($$dict{$_}) } sort keys %$dict)
 }
 attr_sub(Dictionary  => sub {
     my ($pkg, $sym, $ref, undef, $data) = @_;
@@ -125,11 +125,11 @@ sub NewCommand {
         . ($defarg ? "[$defarg]":'') . Group(@_) }
 }
 sub Env {
-    my ($name, $attrs) = @_;
+    my ($name, %attrs) = @_;
     sub {
         Collection(
             "\\begin{$name}".(
-                $attrs ? '['.join(',', map {"$_=$$attrs{$_}"} keys %$attrs).']':''
+                %attrs ? '['.join(',', map {"$_=$attrs{$_}"} sort keys %attrs).']':''
             ), @_, "\\end{$name}"
         )
     }
