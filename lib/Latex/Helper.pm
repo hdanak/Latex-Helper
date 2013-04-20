@@ -205,9 +205,15 @@ sub size {
 sub url :Group { normal, size(9), teletype, "<\\url@_>" }
 
 sub Paragraph :AutoGroup('\par');
-sub Document  :Env('document'):Wrap(shift . &inner);
+sub Document  :Env('document');
 sub UsePackage {
-    "\\usepackage {$_[0]}".KVOptArgs(@_)
+    my $pkg_name;
+    my $phase = 1; # cycle key/value
+    join '', map {
+        '\usepackage'.KVOptArgs(%{$$_[1]})."{$$_[0]}";
+    } map {
+        ($phase = !$phase) ? [$pkg_name => $_] : do { $pkg_name = $_; () }
+    } @_;
 }
 
 1
