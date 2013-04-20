@@ -15,7 +15,7 @@ BEGIN {
 use parent qw(Exporter);
 our @EXPORT = qw( MODIFY_CODE_ATTRIBUTES
     Collection Itemized Dictionary
-    Group AutoGroup NewCommand Env Dedent
+    Group AutoGroup NewCommand Env Dedent UsePackage
     br space nbsp
     normal italic slanted boldface mediumface
     smallcaps sans_serif monospace teletype
