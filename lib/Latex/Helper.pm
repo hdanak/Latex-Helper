@@ -124,14 +124,13 @@ sub NewCommand {
     sub { "\\newcommand{$name}" . ($argc ? "[$argc]":'')
         . ($defarg ? "[$defarg]":'') . Group(@_) }
 }
+sub KVOptArgs { my %attrs = @_;
+    %attrs ? '['.join(',', map {"$_=$attrs{$_}"} sort keys %attrs).']':''
+}
 sub Env {
     my ($name, %attrs) = @_;
     sub {
-        Collection(
-            "\\begin{$name}".(
-                %attrs ? '['.join(',', map {"$_=$attrs{$_}"} sort keys %attrs).']':''
-            ), @_, "\\end{$name}"
-        )
+        Collection("\\begin{$name}".KVOptArgs(%attrs), @_, "\\end{$name}")
     }
 }
 attr_sub Env => sub {
@@ -207,5 +206,8 @@ sub url :Group { normal, size(9), teletype, "<\\url@_>" }
 
 sub Paragraph :AutoGroup('\par');
 sub Document  :Env('document'):Wrap(shift . &inner);
+sub UsePackage {
+    "\\usepackage {$_[0]}".KVOptArgs(@_)
+}
 
 1
