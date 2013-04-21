@@ -3,6 +3,7 @@ our $VERSION = v0.0.1;
 
 use Modern::Perl;
 use Attribute::Handlers;
+use Data::Dumper;
 
 =head1 SYNOPSIS
 
@@ -16,7 +17,7 @@ use parent qw(Exporter);
 our @EXPORT = qw( MODIFY_CODE_ATTRIBUTES
     Collection Itemized Dictionary
     Group AutoGroup NewCommand Env Dedent UsePackage
-    br space nbsp
+    br space nbsp br sp thinsp negsp thicksp quadsp qquadsp
     normal italic slanted boldface mediumface
     smallcaps sans_serif monospace teletype
     size url Paragraph Document
@@ -42,7 +43,7 @@ sub MODIFY_CODE_ATTRIBUTES {
         } else { 1 }
     } @attrs
 }
-sub attr_sub {
+sub attr {
     my ($attr_name, $attr_sub, %flags) = @_;
     our %_CODE_HANDLERS;
     $_CODE_HANDLERS{$attr_name} = $_CODE_HANDLERS{$attr_sub} and return
@@ -79,28 +80,28 @@ sub Collection {
     } @data;
     return $out
 }
-attr_sub(Collection  => sub {
+attr Collection  => sub {
     my ($pkg, $sym, $ref, undef, $data) = @_;
     $ref //= sub { @_ };
     $$sym = sub { Collection(\[&ref], $data ? ( delim => $data ):()) }
-});
+};
 sub Itemized {
     my ($list, %attrs) = @_;
     Env('itemize', %attrs)->(map { +'\item', Collection($_) } @$list)
 }
-attr_sub(Itemized    => sub {
+attr Itemized    => sub {
     my ($pkg, $sym, $ref, undef, $data) = @_;
-    $$sym = sub { Itemized(\@_, @$data) }
-});
+    $$sym = sub { Itemized([&$ref], @$data) }
+};
 sub Dictionary {
     my ($dict, %attrs) = @_;
     Env('description', %attrs)->(map {
                     +"\\item[$_]", Collection($$dict{$_}) } sort keys %$dict)
 }
-attr_sub(Dictionary  => sub {
+attr Dictionary  => sub {
     my ($pkg, $sym, $ref, undef, $data) = @_;
-    $$sym = sub { Dictionary(\@_, @$data) }
-});
+    $$sym = sub { Dictionary({&$ref}, @$data) }
+};
 
 sub Group {
 # NOTE: device method for items to communicate with their Collection;
@@ -108,11 +109,11 @@ sub Group {
 #   the end of its C<Group>, without every C<Group> having one.
     '{'.&Collection.'}'
 }
-attr_sub Group => sub {
+attr Group => sub {
     my ($pkg, $sym, $ref, $data) = @_;
     $$sym = sub { Group(\[&$ref], @$data) }
 };
-attr_sub AutoGroup => sub {
+attr AutoGroup => sub {
     my ($pkg, $sym, $ref, $data) = @_;
     $$sym = sub {
         my @items = &$ref;
@@ -133,7 +134,7 @@ sub Env {
         Collection("\\begin{$name}".KVOptArgs(%attrs), @_, "\\end{$name}")
     }
 }
-attr_sub Env => sub {
+attr Env => sub {
     my ($pkg, $sym, $ref, $data) = @_;
     $$sym = sub { Env(@$data)->(&$ref) }
 };
@@ -155,7 +156,7 @@ sub Dedent {
         return @lines
     }
 }
-attr_sub Dedent => sub {
+attr Dedent => sub {
     my ($pkg, $sym, $ref, $data) = @_;
     my @params = ref($data) eq 'ARRAY' ? @$data[0..2] : $data;
     $$sym = sub { Dedent(@params)->(&$ref) }
@@ -163,9 +164,9 @@ attr_sub Dedent => sub {
 # NOTE: Make the result from all of the above auto-chainable;
 # that is,  sub X :Attr1(...) { ... }
 #           sub Y :X(...) { ... }
-attr_sub Wrap => sub {
+attr Wrap => sub {
     my ($pkg, $sym, $ref, $data) = @_;
-    $$sym = sub { local *inner = $ref; eval($data) }
+    $$sym = sub { local *inner = \&$ref; eval($data) }
 }, raw => 1;
 
 }
@@ -202,7 +203,7 @@ sub size {
     $line_space = $line_space//0 + $size;
     "\\fontsize{$size}{$line_space}\\selectfont"
 }
-sub url :Group { normal, size(9), teletype, "<\\url@_>" }
+sub url :Group { normal, size(9), teletype, '<', '\url', @_, '>' }
 
 sub Paragraph :AutoGroup('\par');
 sub Document  :Env('document');
