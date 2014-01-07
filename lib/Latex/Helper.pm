@@ -130,9 +130,8 @@ sub NewCommand {
         . ($defarg ? "[$defarg]":'') . Group(@_) }
 }
 
-sub OptArgs {
+sub KVOpts {
     return '' unless @_;
-    return "{$_[0]}" unless @_ > 1;
 
     my %attrs = @_;
     '['.join(',', map {"$_=$attrs{$_}"} sort keys %attrs).']'
@@ -140,7 +139,9 @@ sub OptArgs {
 
 sub Env {
     my ($name, @args) = @_;
-    sub { Collection("\\begin{$name}".OptArgs(@args), @_, "\\end{$name}") }
+
+    sub { Collection("\\begin{$name}".(@args == 1 ? "{$args[0]}" : KVOpts(@args)),
+                        @_, "\\end{$name}") }
 }
 attr Env => sub {
     my ($pkg, $sym, $ref, $data) = @_;
@@ -231,7 +232,7 @@ sub UsePackage {
     my $pkg_name;
     my $phase = 1; # cycle key/value
     join '', map {
-        '\usepackage'.OptArgs(%{$$_[1]})."{$$_[0]}";
+        '\usepackage'.(ref($$_[1]) eq 'HASH' ? KVOpts(%{$$_[1]}) : "[$$_[1]]")."{$$_[0]}";
     } map {
         ($phase = !$phase) ? [$pkg_name => $_] : do { $pkg_name = $_; () }
     } @_;

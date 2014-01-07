@@ -5,7 +5,12 @@ use Latex::Helper;
 
 is UsePackage(
     a   => { k1 => 'v1', k2 => 'v2' },
-    b   => {}
-), '\usepackage[k1=v1,k2=v2]{a}\usepackage{b}';
+    b   => {},
+    c   => 'opt',
+), join('',
+    '\usepackage[k1=v1,k2=v2]{a}',
+    '\usepackage{b}',
+    '\usepackage[opt]{c}',
+);
 
 done_testing 1
