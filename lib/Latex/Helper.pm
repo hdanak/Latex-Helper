@@ -1,5 +1,5 @@
 package Latex::Helper;
-our $VERSION = v0.0.1;
+our $VERSION = v0.0.2;
 
 use Modern::Perl;
 use Attribute::Handlers;
@@ -16,7 +16,7 @@ BEGIN {
 use parent qw(Exporter);
 our @EXPORT = qw( MODIFY_CODE_ATTRIBUTES
     Collection Itemized Dictionary
-    Group AutoGroup NewCommand Env Dedent UsePackage
+    Group AutoGroup NewCommand Env CmdGroup Dedent UsePackage
     br space nbsp br sp thinsp negsp thicksp quadsp qquadsp
     normal italic slanted boldface mediumface
     smallcaps sans_serif monospace teletype
@@ -43,6 +43,7 @@ sub MODIFY_CODE_ATTRIBUTES {
         } else { 1 }
     } @attrs
 }
+
 sub attr {
     my ($attr_name, $attr_sub, %flags) = @_;
     our %_CODE_HANDLERS;
@@ -85,6 +86,7 @@ attr Collection  => sub {
     $ref //= sub { @_ };
     $$sym = sub { Collection(\[&ref], $data ? ( delim => $data ):()) }
 };
+
 sub Itemized {
     my ($list, %attrs) = @_;
     Env('itemize', %attrs)->(map { +'\item', Collection($_) } @$list)
@@ -93,6 +95,7 @@ attr Itemized    => sub {
     my ($pkg, $sym, $ref, undef, $data) = @_;
     $$sym = sub { Itemized([&$ref], @$data) }
 };
+
 sub Dictionary {
     my ($dict, %attrs) = @_;
     Env('description', %attrs)->(map {
@@ -103,10 +106,10 @@ attr Dictionary  => sub {
     $$sym = sub { Dictionary({&$ref}, @$data) }
 };
 
-sub Group {
-# NOTE: device method for items to communicate with their Collection;
+# TODO devise method for items to communicate with their Collection;
 #   for example, the C<italic> element could add an italic-correction token at
 #   the end of its C<Group>, without every C<Group> having one.
+sub Group {
     '{'.&Collection.'}'
 }
 attr Group => sub {
@@ -120,24 +123,35 @@ attr AutoGroup => sub {
         @items ? Group(@$data, @items) : "@$data"
     }
 };
+
 sub NewCommand {
     my ($name, $argc, $defarg) = @_;
     sub { "\\newcommand{$name}" . ($argc ? "[$argc]":'')
         . ($defarg ? "[$defarg]":'') . Group(@_) }
 }
+
 sub KVOptArgs { my %attrs = @_;
     %attrs ? '['.join(',', map {"$_=$attrs{$_}"} sort keys %attrs).']':''
 }
+
 sub Env {
     my ($name, %attrs) = @_;
-    sub {
-        Collection("\\begin{$name}".KVOptArgs(%attrs), @_, "\\end{$name}")
-    }
+    sub { Collection("\\begin{$name}".KVOptArgs(%attrs), @_, "\\end{$name}") }
 }
 attr Env => sub {
     my ($pkg, $sym, $ref, $data) = @_;
     $$sym = sub { Env(@$data)->(&$ref) }
 };
+
+sub CmdGroup {
+    my ($name, %attrs) = @_;
+    sub { "\\$name".Group(@_) }
+}
+attr CmdGroup => sub {
+    my ($pkg, $sym, $ref, $data) = @_;
+    $$sym = sub { CmdGroup(@$data)->(&$ref) }
+};
+
 sub Dedent {
     my ($max, $indent, $tabsize) = map{int}(shift//0, shift//1, shift//8);
         # Remove as much as (evenly) possible------^         ^         ^
@@ -161,7 +175,8 @@ attr Dedent => sub {
     my @params = ref($data) eq 'ARRAY' ? @$data[0..2] : $data;
     $$sym = sub { Dedent(@params)->(&$ref) }
 };
-# NOTE: Make the result from all of the above auto-chainable;
+
+# TODO Make the result from all of the above auto-chainable;
 # that is,  sub X :Attr1(...) { ... }
 #           sub Y :X(...) { ... }
 attr Wrap => sub {
