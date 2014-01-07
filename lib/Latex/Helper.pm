@@ -130,13 +130,17 @@ sub NewCommand {
         . ($defarg ? "[$defarg]":'') . Group(@_) }
 }
 
-sub KVOptArgs { my %attrs = @_;
-    %attrs ? '['.join(',', map {"$_=$attrs{$_}"} sort keys %attrs).']':''
+sub OptArgs {
+    return '' unless @_;
+    return "{$_[0]}" unless @_ > 1;
+
+    my %attrs = @_;
+    '['.join(',', map {"$_=$attrs{$_}"} sort keys %attrs).']'
 }
 
 sub Env {
-    my ($name, %attrs) = @_;
-    sub { Collection("\\begin{$name}".KVOptArgs(%attrs), @_, "\\end{$name}") }
+    my ($name, @args) = @_;
+    sub { Collection("\\begin{$name}".OptArgs(@args), @_, "\\end{$name}") }
 }
 attr Env => sub {
     my ($pkg, $sym, $ref, $data) = @_;
@@ -222,11 +226,12 @@ sub url :Group { normal, size(9), teletype, '<', '\url', @_, '>' }
 
 sub Paragraph :AutoGroup('\par');
 sub Document  :Env('document');
+
 sub UsePackage {
     my $pkg_name;
     my $phase = 1; # cycle key/value
     join '', map {
-        '\usepackage'.KVOptArgs(%{$$_[1]})."{$$_[0]}";
+        '\usepackage'.OptArgs(%{$$_[1]})."{$$_[0]}";
     } map {
         ($phase = !$phase) ? [$pkg_name => $_] : do { $pkg_name = $_; () }
     } @_;
