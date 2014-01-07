@@ -98,12 +98,20 @@ attr Itemized    => sub {
 
 sub Dictionary {
     my ($dict, %attrs) = @_;
+    my @items;
+    if (ref($dict) eq 'HASH') {
+        @items = map { [$_ => $$dict{$_}] } sort keys %$dict
+    } elsif (ref($dict) eq 'ARRAY') {
+        @items = @$dict
+    }
     Env('description', %attrs)->(map {
-                    +"\\item[$_]", Collection($$dict{$_}) } sort keys %$dict)
+        my ($k, $v) = @{$items[$_]};
+        "\\item[$k]" => Collection($v)
+    } 0..$#items)
 }
 attr Dictionary  => sub {
     my ($pkg, $sym, $ref, undef, $data) = @_;
-    $$sym = sub { Dictionary({&$ref}, @$data) }
+    $$sym = sub { Dictionary([&$ref], @$data) }
 };
 
 # TODO devise method for items to communicate with their Collection;
