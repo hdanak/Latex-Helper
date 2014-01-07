@@ -16,7 +16,7 @@ BEGIN {
 use parent qw(Exporter);
 our @EXPORT = qw( MODIFY_CODE_ATTRIBUTES
     Collection Itemized Dictionary
-    Group AutoGroup NewCommand Env CmdGroup Dedent UsePackage
+    Group AutoGroup NewCommand Env Dedent UsePackage
     br space nbsp br sp thinsp negsp thicksp quadsp qquadsp
     normal italic slanted boldface mediumface
     smallcaps sans_serif monospace teletype
@@ -154,15 +154,6 @@ sub Env {
 attr Env => sub {
     my ($pkg, $sym, $ref, $data) = @_;
     $$sym = sub { Env(@$data)->(&$ref) }
-};
-
-sub CmdGroup {
-    my ($name, %attrs) = @_;
-    sub { "\\$name".Group(@_) }
-}
-attr CmdGroup => sub {
-    my ($pkg, $sym, $ref, $data) = @_;
-    $$sym = sub { CmdGroup(@$data)->(&$ref) }
 };
 
 sub Dedent {
