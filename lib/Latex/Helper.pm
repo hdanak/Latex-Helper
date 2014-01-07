@@ -1,5 +1,5 @@
 package Latex::Helper;
-our $VERSION = v0.0.2;
+# VERSION
 
 use Modern::Perl;
 use Attribute::Handlers;
